@@ -1,10 +1,10 @@
 # refactored-bassoon
 
-# refractored-basson is a working titile for a script to launch multiple websites of any type at once.
+# refractored-basson is a working title for a script to launch multiple websites of any type simultaneously.
 
-This is going to be a social media manager script to bring up all social media manager sites that you can access at the same time as you open your browser. It helps you keep memory And balance of everything that you have.
+A prototype social media manager script designed to open all social media management sites simultaneously when you launch your browser. It helps you keep track of and balance everything you have.
 
-That's a great question\! I can certainly help you create a script to open multiple websites at once. This is a very common task in development and automation.
+This script allows you to open multiple websites simultaneously. This script is a prevalent task in development and automation.
 
 ## 💡 Overview of the Solution
 
@@ -12,22 +12,21 @@ The simplest and most versatile way to achieve this is by using a **Python scrip
 
 This approach offers the following advantages:
 
-  * **Cross-Browser Compatibility:** The Python `webbrowser` module is generally designed to work with the user's **default browser**, but it can often be configured to use specific browsers like Opera, Chrome, or Firefox, as long as they are correctly installed on your system. You **won't necessarily need separate scripts** for different browsers, just minor adjustments to the main script.
+  * **Cross-Browser Compatibility:** The Python `webbrowser` module is generally designed to work with the user's **default browser**, but it can often be configured to use specific browsers like Opera, Chrome, or Firefox, as long as they are installed correctly on your system. You won't necessarily need separate scripts for different browsers; just minor adjustments to the main script.
   * **Simplicity:** It requires only a few lines of code to open a list of URLs.
-  * **No External Libraries:** The `webbrowser` module comes standard with Python, so there's nothing extra to install.
+  * **No External Libraries:** The `webbrowser` module comes standard with Python; there's nothing extra to install.
 
 -----
 
 ## 🛠️ Development Steps and Implementation
 
-Here is the complete Python script and instructions on how to use it.
+Here is the complete Python script, along with instructions on how to use it.
 
 ### 2\. The Python Script
 
 Save the following code as a file named `open_sites.py`.
 
-```python
-import webbrowser
+```python webbrowser
 import time
 
 # --- Configuration ---
