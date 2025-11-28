@@ -1,0 +1,20 @@
+{
+    "default_browser": "opera",
+    "social_media_urls": [
+        "https://app.hootsuite.com/",
+        "https://app.sproutsocial.com/",
+        "https://publish.buffer.com/",
+        "https://app.agorapulse.com/",
+        "https://sendible.com/",
+        "https://app.later.com/",
+        "https://app.socialbee.io/",
+        "https://app.meet-edgar.com/",
+        "https://app.coschedule.com/",
+        "https://app.pallyy.com/",
+        "https://app.tailwindapp.com/",
+        "https://app.planable.io/",
+        "https://app.socialpilot.co/",
+        "https://app.zoho.com/social/",
+        "https://app.metricool.com/"
+    ]
+}
