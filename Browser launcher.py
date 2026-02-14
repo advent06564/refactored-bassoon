@@ -10,6 +10,7 @@ browsers = {
     "Edge": {"win": "msedge.exe", "darwin": "Microsoft Edge", "linux": "microsoft-edge"},
     "Brave": {"win": "brave.exe", "darwin": "Brave Browser", "linux": "brave-browser"},
     "Opera": {"win": "launcher.exe", "darwin": "Opera", "linux": "opera"},
+    "Cursor": {"win": "Cursor.exe", "darwin": "Cursor", "linux": "cursor"},
 }
 
 def open_browser(browser_name, browser_execs):
@@ -28,6 +29,18 @@ def open_browser(browser_name, browser_execs):
             if os.path.exists(opera_path):
                 try:
                     subprocess.Popen(opera_path)
+                    print(f"Successfully opened {browser_name}.")
+                    return
+                except Exception as e:
+                    print(f"An error occurred while trying to open {browser_name}: {e}")
+                    return
+
+        # Special case for Cursor on windows
+        if browser_name == "Cursor":
+            cursor_path = os.path.join(os.environ['USERPROFILE'], 'AppData', 'Local', 'Programs', 'cursor', 'Cursor.exe')
+            if os.path.exists(cursor_path):
+                try:
+                    subprocess.Popen(cursor_path)
                     print(f"Successfully opened {browser_name}.")
                     return
                 except Exception as e:
