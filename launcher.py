@@ -9,6 +9,7 @@ import platform
 import shutil
 import subprocess
 
+import utils as _u
 from utils import (
     find_first_existing,
     launch_exe,
@@ -20,7 +21,6 @@ from utils import (
     ENV,
     is_windows,
 )
-from utils import _tracker  # for macOS launch tracking
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Game Launchers
@@ -136,7 +136,7 @@ def _launch_macos_app(app_name: str, display_name: str) -> bool:
     try:
         subprocess.Popen(["open", "-a", app_name])
         print(f"  [OK] Launched: {display_name}")
-        _tracker.mark_launched(display_name)
+        _u._tracker.mark_launched(display_name)
         return True
     except Exception as e:
         print(f"  [FAIL] Error launching {display_name}: {e}")
