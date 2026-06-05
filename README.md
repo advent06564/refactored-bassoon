@@ -1,110 +1,120 @@
-# refactored-bassoon
+# Refactored Bassoon — Unified Launcher
 
-# refractored-basson is a working title for a script to launch multiple websites of any type simultaneously.
+> *One launcher to rule them all — game platforms, browsers, live-streaming tools, and VM systems in a single interactive menu, with zero double-launching.*
 
-A prototype social media manager script designed to open all social media management sites simultaneously when you launch your browser. It helps you keep track of and balance everything you have.
+A modular Python launcher system that opens all your installed game launchers, web browsers, streaming/recording apps, and virtualization systems from one interactive CLI menu. Built with a centralized launch tracker to guarantee no program opens more than once per session.
 
-This script allows you to open multiple websites simultaneously. This script is a prevalent task in development and automation.
+## 🎯 Features
 
-## 💡 Overview of the Solution
+- **Game Launchers** — Steam, Epic Games, GOG Galaxy, Battle.net, EA Desktop, Ubisoft Connect, Amazon Games, Xbox Game Pass, itch.io, PlayStation PC
+- **Web Browsers** — Chrome, Firefox, Edge, Brave, Opera, Cursor (cross-platform)
+- **Live & Recording Kit** — Warudo, OBS Studio, OneNote, Sticky Notes, Perplexity
+- **VM System** — Docker Desktop, WSL
+- **Site Runner** — Opens all URLs from `config.json` in browser tabs (supports Windows, macOS, Linux, and WSL)
+- **Duplicate Prevention** — Centralized `LaunchTracker` ensures no program opens twice, even across categories
+- **Startup Cleaner** — Remove startup programs from Windows folders and registry
 
-The simplest and most versatile way to achieve this is by using a **Python script** combined with the built-in **`webbrowser`** module.
+## 🛠️ Technology Stack
 
-This approach offers the following advantages:
+- **Python 3.x** — No external dependencies (standard library only)
+- Cross-platform support for Windows, macOS, and Linux
+- WSL-aware site runner with automatic `wsl-open` detection
 
-  * **Cross-Browser Compatibility:** The Python `webbrowser` module is generally designed to work with the user's **default browser**, but it can often be configured to use specific browsers like Opera, Chrome, or Firefox, as long as they are installed correctly on your system. You won't necessarily need separate scripts for different browsers; just minor adjustments to the main script.
-  * **Simplicity:** It requires only a few lines of code to open a list of URLs.
-  * **No External Libraries:** The `webbrowser` module comes standard with Python; there's nothing extra to install.
+## 📁 Project Structure
 
------
-
-## 🛠️ Development Steps and Implementation
-
-Here is the complete Python script, along with instructions on how to use it.
-
-### 2\. The Python Script
-
-Save the following code as a file named `open_sites.py`.
-
-```python webbrowser
-import time
-
-# --- Configuration ---
-
-# 2. Define the list of URLs you want to open.
-#    Make sure they include the http:// or https:// prefix.
-URLS_TO_OPEN = [
-    "https://www.google.com",
-    "https://www.youtube.com",
-    "https://www.github.com",
-    "https://docs.python.org/4/library/webbrowser.html"
-]
-
-# 3. Define the browser you want to use.
-#    - Set to None to use the system's default browser (Recommended for simplicity).
-#    - Set to a specific browser name like "opera", "chrome", "firefox", or "safari".
-#      *Note: The string must exactly match a known browser type in your Python installation.*
-BROWSER_NAME = "opera"  # Change this to "chrome" or None, etc.
-
-# 4. Optional: Add a small delay between opening each site.
-#    This can prevent your browser from freezing if the list is very long.
-DELAY_SECONDS = 1.5 
-
-# --- Script Logic ---
-
-# Check if a specific browser is requested
-if BROWSER_NAME:
-    try:
-        # Register and get the controller for the specified browser
-        browser_controller = webbrowser.get(BROWSER_NAME)
-        print(f"Attempting to open sites with: {BROWSER_NAME}")
-    except webbrowser.Error:
-        print(f"⚠️ Could not find or open browser: '{BROWSER_NAME}'. Falling back to default browser.")
-        browser_controller = webbrowser
-else:
-    # Use the default system browser
-    browser_controller = webbrowser
-    print("Attempting to open sites with: Default System Browser")
-
-
-# Loop through the list of URLs and open each one
-for url in URLS_TO_OPEN:
-    print(f"Opening: {url}")
-    # The 'new=3' argument opens the URL in a new tab if possible.
-    browser_controller.open(url, new=3) 
-    
-    # Wait for the specified delay
-    time.sleep(DELAY_SECONDS)
-
-print("\n✅ Finished opening all specified websites.")
+```text
+refactored-bassoon/
+├── launcher.py                    # Main interactive menu (Unified Launcher)
+├── utils.py                       # Shared helpers + LaunchTracker singleton
+├── config.json                    # Browser preference + URL list for site runner
+│
+├── launch_all_game_launchers.py   # Standalone: game launchers only
+├── Browser launcher.py            # Standalone: browsers only
+├── launch_live_and_rec_kit.py     # Standalone: live/recording kit
+├── vm_system_launcher.py          # Standalone: Docker + WSL
+├── vm_system.py                   # Standalone: Docker + WSL (legacy)
+│
+├── run_sites.py                   # Standalone: open URLs from config.json
+├── stop_startup_programs.py       # Standalone: Windows startup cleaner
+│
+├── Hello World.py                 # Sanity check
+└── README.md
 ```
 
-### 3\. How to Implement and Run
+## 🚀 Getting Started
 
-2.  **Save the Code:** Save the script above as `open_sites.py`.
+### Run the Unified Launcher
 
-3.  **Open your Terminal/Command Prompt.**
-
-4.  **Navigate to the directory** where you saved the file.
-
-5.  **Run the script** using the Python interpreter:
-
-    ```bash
-    python open_sites.py
-    ```
-
-### 4\. Adjusting for Multiple Browsers
-
-As you can see in the configuration section of the script, the key is the line:
-
-```python
-BROWSER_NAME = "opera"  # Change this to "chrome", "firefox", or None
+```bash
+python launcher.py
 ```
 
-  * **To use Opera:** Keep it as `BROWSER_NAME = "opera"`.
-  * **To use Chrome:** Change it to `BROWSER_NAME = "chrome"`.
-  * **To use Firefox:** Change it to `BROWSER_NAME = "firefox"`.
-  * **To use the System Default Browser:** Change it to `BROWSER_NAME = None`.
+You'll see an interactive menu:
 
-**In short: You only need one script\!** You can either modify the `BROWSER_NAME` variable inside the script each time, or even make a slightly more advanced version that takes the browser name as a command-line argument.
+```
+========================================================
+          UNIFIED LAUNCHER
+========================================================
+  Game Launchers | Browsers | Live Kit | VM System
+========================================================
 
+  [1] Game Launchers (Steam, Epic, GOG, Battle.net, EA, ...)
+
+  [2] Web Browsers (Chrome, Firefox, Edge, Brave, Opera, Cursor)
+
+  [3] Live & Recording Kit (Warudo, OBS, OneNote, Sticky Notes, ...)
+
+  [4] Launch ALL
+
+  [5] VM System (Docker Desktop, WSL)
+
+  [0] Exit
+
+  Enter your choice [0-5]:
+```
+
+### Run Individual Launchers
+
+Each component can also be run standalone:
+
+```bash
+python launch_all_game_launchers.py   # Game launchers only
+python "Browser launcher.py"          # Browsers only
+python launch_live_and_rec_kit.py     # Live kit only
+python vm_system_launcher.py          # VM systems only
+```
+
+### Open Websites from Config
+
+```bash
+# Uses browser specified in config.json
+python run_sites.py
+
+# Override browser
+python run_sites.py chrome
+python run_sites.py firefox
+```
+
+Edit `config.json` to customize the URL list and default browser:
+
+```json
+{
+    "default_browser": "opera",
+    "social_media_urls": [
+        "https://app.hootsuite.com/",
+        "https://app.sproutsocial.com/"
+    ]
+}
+```
+
+## 🔒 Duplicate Prevention
+
+The `utils.py` module includes a `LaunchTracker` singleton that tracks every program launched during a session. Key design decisions:
+
+- **Steam** is launched only by the Game Launchers category — it was intentionally removed from Live Kit to prevent double-opening
+- Selecting "Launch ALL" calls `reset_tracker()` once, then all categories share the same tracker
+- Each standalone script starts with a fresh tracker
+
+---
+
+*Built for efficient, one-click system startup.*
