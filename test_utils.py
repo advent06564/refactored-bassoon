@@ -199,6 +199,14 @@ class TestLaunchExeFromPaths:
             assert result is True
             mock_exists.assert_not_called()  # short-circuits
 
+    @patch("os.path.exists", return_value=True)
+    @patch("subprocess.Popen", side_effect=PermissionError("denied"))
+    def test_handles_permission_error(self, mock_popen, mock_exists):
+        """PermissionError from Popen should be caught and return False."""
+        result = launch_exe_from_paths(["/denied/app.exe"], "DeniedApp")
+        assert result is False
+        assert was_launched("DeniedApp") is False
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # launch_uwp
@@ -223,6 +231,15 @@ class TestLaunchUWP:
             result = launch_uwp("ms-settings:", "Settings")
             assert result is True
             mock_popen.assert_not_called()
+
+    def test_no_skip_when_flag_false(self):
+        """With skip_if_launched=False, launch even if already tracked."""
+        utils._tracker.mark_launched("Settings")
+        with patch("subprocess.Popen") as mock_popen:
+            result = launch_uwp("ms-settings:", "Settings", skip_if_launched=False)
+            assert result is True
+            mock_popen.assert_called_once()  # should launch despite tracker
+            assert was_launched("Settings") is True
 
     @patch("subprocess.Popen", side_effect=Exception("UWP failed"))
     def test_handles_failure(self, mock_popen):
@@ -253,6 +270,15 @@ class TestLaunchOsStartfile:
             result = launch_os_startfile("C:\\shortcut.lnk", "ShortcutApp")
             assert result is True
             mock_startfile.assert_not_called()
+
+    def test_no_skip_when_flag_false(self):
+        """With skip_if_launched=False, launch even if already tracked."""
+        utils._tracker.mark_launched("ShortcutApp")
+        with patch("os.startfile") as mock_startfile:
+            result = launch_os_startfile("C:\\shortcut.lnk", "ShortcutApp", skip_if_launched=False)
+            assert result is True
+            mock_startfile.assert_called_once()  # should launch despite tracker
+            assert was_launched("ShortcutApp") is True
 
     @patch("os.startfile", side_effect=FileNotFoundError("missing"))
     def test_handles_file_not_found(self, mock_startfile):

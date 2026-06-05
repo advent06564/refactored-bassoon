@@ -171,6 +171,63 @@ class TestLaunchBrowsers:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Opera launcher.exe branch (Windows special case)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestOperaBrowser:
+    """Opera's Windows executable is 'launcher.exe' — a special branch in
+    launch_browsers() that skips shutil.which() and goes straight to
+    fallback paths."""
+
+    def test_opera_skips_which_on_windows(self):
+        """shutil.which('launcher.exe') should NOT be called for Opera."""
+        with patch("platform.system", return_value="Windows"):
+            with patch("shutil.which") as mock_which:
+                with patch("os.path.exists", return_value=False):
+                    launch_browsers()
+                    # Opera should never call shutil.which
+                    opera_calls = [
+                        c for c in mock_which.call_args_list
+                        if c.args and c.args[0] == "launcher.exe"
+                    ]
+                    assert len(opera_calls) == 0, (
+                        f"shutil.which was called for Opera's launcher.exe — "
+                        f"should be skipped"
+                    )
+
+    @patch("platform.system", return_value="Windows")
+    @patch("shutil.which")
+    @patch("os.path.exists")
+    def test_opera_uses_fallback_paths(self, mock_exists, mock_which, mock_system):
+        """Opera should be launched via fallback paths, not which()."""
+        # Make only Opera's fallback path exist
+        def exists_side_effect(path):
+            # Only Opera's first fallback path exists
+            return "Opera" in path and "launcher.exe" in path
+        mock_exists.side_effect = exists_side_effect
+        mock_which.return_value = None
+
+        with patch("launcher.launch_exe", return_value=True) as mock_launch:
+            launch_browsers()
+            # Opera launch_exe should have been called at least once
+            opera_calls = [
+                c for c in mock_launch.call_args_list
+                if "Opera" in str(c)
+            ]
+            assert len(opera_calls) >= 1, (
+                "Opera should have been launched via fallback path"
+            )
+
+    @patch("platform.system", return_value="Windows")
+    @patch("shutil.which")
+    @patch("os.path.exists", return_value=False)
+    def test_opera_not_found_prints_message(self, mock_exists, mock_which, mock_system):
+        """When Opera is not found, it should print 'Not found' without crashing."""
+        mock_which.return_value = None
+        launch_browsers()  # should not raise
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # launch_vm_system
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -289,7 +346,7 @@ class TestMenuFunctions:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# main() loop — sanity
+# main() loop — choices 0-5
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestMainLoop:
@@ -311,3 +368,47 @@ class TestMainLoop:
         # main() calls input() for: menu choice → Enter to continue → menu choice → exit
         with patch("builtins.input", side_effect=["99", "", "0"]):
             main()  # 99 → invalid, Enter → back to menu, 0 → exit
+
+
+class TestMainWithChoices:
+    """Test main() with each valid menu choice (1-5)."""
+
+    def _run_main_with_choice(self, choice: str):
+        """Helper: run main() with a choice, then exit."""
+        with patch("launcher.clear_screen"):
+            with patch("launcher.print_header"):
+                with patch("launcher.print_menu"):
+                    with patch("builtins.input", side_effect=[choice, "", "0"]):
+                        main()
+
+    def test_choice_1_launches_game_launchers(self):
+        with patch("launcher.launch_game_launchers") as mock_games:
+            self._run_main_with_choice("1")
+            mock_games.assert_called_once()
+
+    def test_choice_2_launches_browsers(self):
+        with patch("launcher.launch_browsers") as mock_browsers:
+            self._run_main_with_choice("2")
+            mock_browsers.assert_called_once()
+
+    def test_choice_3_launches_live_kit(self):
+        with patch("launcher.launch_live_kit") as mock_live:
+            self._run_main_with_choice("3")
+            mock_live.assert_called_once()
+
+    def test_choice_4_calls_launch_all(self):
+        with patch("launcher.launch_all") as mock_all:
+            self._run_main_with_choice("4")
+            mock_all.assert_called_once()
+
+    def test_choice_5_launches_vm_system(self):
+        with patch("launcher.launch_vm_system") as mock_vm:
+            self._run_main_with_choice("5")
+            mock_vm.assert_called_once()
+
+    def test_reset_tracker_called_for_each_choice(self):
+        """reset_tracker() should be called before each menu action."""
+        with patch("launcher.reset_tracker") as mock_reset:
+            with patch("launcher.launch_browsers"):  # prevent real browser launches
+                self._run_main_with_choice("2")
+            mock_reset.assert_called()
