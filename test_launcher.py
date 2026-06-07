@@ -51,12 +51,16 @@ class TestLaunchGameLaunchers:
 
     def test_calls_launch_exe_from_paths_for_each_launcher(self):
         with patch("launcher.launch_exe_from_paths", return_value=True) as mock_launch:
-            launch_game_launchers()
-            # Should be called for each launcher in _GAME_LAUNCHERS
-            launcher_names = list(launcher._GAME_LAUNCHERS.keys())
-            assert mock_launch.call_count == len(launcher_names)
-            for name in launcher_names:
-                mock_launch.assert_any_call(launcher._GAME_LAUNCHERS[name], name)
+            with patch("utils.is_process_running", return_value=False):
+                launch_game_launchers()
+                # Should be called for each launcher in _GAME_LAUNCHERS
+                launcher_names = list(launcher._GAME_LAUNCHERS.keys())
+                assert mock_launch.call_count == len(launcher_names)
+                for name in launcher_names:
+                    exe_name = launcher._GAME_LAUNCHER_EXES.get(name)
+                    mock_launch.assert_any_call(
+                        launcher._GAME_LAUNCHERS[name], name, exe_name=exe_name
+                    )
 
     def test_includes_steam(self):
         """Steam must be in game launchers for the double-launch prevention to work."""
@@ -311,9 +315,10 @@ class TestLaunchAll:
 class TestSteamDoubleLaunchIntegration:
     """Integration test: Steam must not be double-launched by launch_all."""
 
+    @patch("utils.is_process_running", return_value=False)
     @patch("os.path.exists", return_value=True)
     @patch("subprocess.Popen")
-    def test_steam_launched_only_once(self, mock_popen, mock_exists):
+    def test_steam_launched_only_once(self, mock_popen, mock_exists, mock_proc):
         """Simulate launch_all with all exe paths existing; Steam must be Popen'd once."""
         # All paths exist so every launcher gets launched
         launch_all()

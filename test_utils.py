@@ -24,6 +24,7 @@ from utils import (
     launch_os_startfile,
     reset_tracker,
     was_launched,
+    is_process_running,
     is_windows,
     is_macos,
     ENV,
@@ -137,20 +138,23 @@ class TestLaunchExe:
         reset_tracker()
 
     @patch("subprocess.Popen")
-    def test_launches_and_marks(self, mock_popen):
+    @patch("utils.is_process_running", return_value=False)
+    def test_launches_and_marks(self, mock_proc, mock_popen):
         result = launch_exe("/fake/app.exe", "TestApp")
         assert result is True
         mock_popen.assert_called_once_with(["/fake/app.exe"])
         assert was_launched("TestApp") is True
 
-    def test_skips_when_already_launched(self):
+    @patch("utils.is_process_running", return_value=False)
+    def test_skips_when_already_launched(self, mock_proc):
         utils._tracker.mark_launched("TestApp")
         with patch("subprocess.Popen") as mock_popen:
             result = launch_exe("/fake/app.exe", "TestApp")
             assert result is True
             mock_popen.assert_not_called()
 
-    def test_no_skip_when_flag_false(self):
+    @patch("utils.is_process_running", return_value=False)
+    def test_no_skip_when_flag_false(self, mock_proc):
         utils._tracker.mark_launched("TestApp")
         with patch("subprocess.Popen") as mock_popen:
             result = launch_exe("/fake/app.exe", "TestApp", skip_if_launched=False)
@@ -158,13 +162,15 @@ class TestLaunchExe:
             mock_popen.assert_called_once()
 
     @patch("subprocess.Popen", side_effect=FileNotFoundError("not found"))
-    def test_handles_launch_failure(self, mock_popen):
+    @patch("utils.is_process_running", return_value=False)
+    def test_handles_launch_failure(self, mock_proc, mock_popen):
         result = launch_exe("/bad/path.exe", "BadApp")
         assert result is False
         assert was_launched("BadApp") is False  # not marked on failure
 
     @patch("subprocess.Popen", side_effect=PermissionError("denied"))
-    def test_handles_permission_error(self, mock_popen):
+    @patch("utils.is_process_running", return_value=False)
+    def test_handles_permission_error(self, mock_proc, mock_popen):
         result = launch_exe("/denied.exe", "DeniedApp")
         assert result is False
 
@@ -181,7 +187,8 @@ class TestLaunchExeFromPaths:
 
     @patch("os.path.exists", return_value=True)
     @patch("subprocess.Popen")
-    def test_finds_first_and_launches(self, mock_popen, mock_exists):
+    @patch("utils.is_process_running", return_value=False)
+    def test_finds_first_and_launches(self, mock_proc, mock_popen, mock_exists):
         result = launch_exe_from_paths(["/a/app.exe", "/b/app.exe"], "MyApp")
         assert result is True
         mock_popen.assert_called_once_with(["/a/app.exe"])
@@ -201,7 +208,8 @@ class TestLaunchExeFromPaths:
 
     @patch("os.path.exists", return_value=True)
     @patch("subprocess.Popen", side_effect=PermissionError("denied"))
-    def test_handles_permission_error(self, mock_popen, mock_exists):
+    @patch("utils.is_process_running", return_value=False)
+    def test_handles_permission_error(self, mock_proc, mock_popen, mock_exists):
         """PermissionError from Popen should be caught and return False."""
         result = launch_exe_from_paths(["/denied/app.exe"], "DeniedApp")
         assert result is False
@@ -222,7 +230,7 @@ class TestLaunchUWP:
     def test_launches_and_marks(self, mock_popen):
         result = launch_uwp("ms-settings:", "Settings")
         assert result is True
-        mock_popen.assert_called_once_with('start "" ms-settings:', shell=True)
+        mock_popen.assert_called_once_with(["cmd", "/c", "start", "", "ms-settings:"])
         assert was_launched("Settings") is True
 
     def test_skips_when_already_launched(self):
@@ -257,21 +265,24 @@ class TestLaunchOsStartfile:
     def setup_method(self):
         reset_tracker()
 
+    @patch("utils.is_process_running", return_value=False)
     @patch("os.startfile")
-    def test_launches_and_marks(self, mock_startfile):
+    def test_launches_and_marks(self, mock_startfile, mock_proc):
         result = launch_os_startfile("C:\\shortcut.lnk", "ShortcutApp")
         assert result is True
         mock_startfile.assert_called_once_with("C:\\shortcut.lnk")
         assert was_launched("ShortcutApp") is True
 
-    def test_skips_when_already_launched(self):
+    @patch("utils.is_process_running", return_value=False)
+    def test_skips_when_already_launched(self, mock_proc):
         utils._tracker.mark_launched("ShortcutApp")
         with patch("os.startfile") as mock_startfile:
             result = launch_os_startfile("C:\\shortcut.lnk", "ShortcutApp")
             assert result is True
             mock_startfile.assert_not_called()
 
-    def test_no_skip_when_flag_false(self):
+    @patch("utils.is_process_running", return_value=False)
+    def test_no_skip_when_flag_false(self, mock_proc):
         """With skip_if_launched=False, launch even if already tracked."""
         utils._tracker.mark_launched("ShortcutApp")
         with patch("os.startfile") as mock_startfile:
@@ -296,8 +307,9 @@ class TestDoubleLaunchPrevention:
     def setup_method(self):
         reset_tracker()
 
+    @patch("utils.is_process_running", return_value=False)
     @patch("subprocess.Popen")
-    def test_same_name_blocked_across_helper_types(self, mock_popen):
+    def test_same_name_blocked_across_helper_types(self, mock_popen, mock_proc):
         """launch_exe sets tracker; launch_uwp with same name should skip."""
         launch_exe("/fake/steam.exe", "Steam")
         assert was_launched("Steam")
@@ -307,8 +319,9 @@ class TestDoubleLaunchPrevention:
         assert result is True  # returns True for skip
         mock_popen.assert_not_called()  # NOT launched again
 
+    @patch("utils.is_process_running", return_value=False)
     @patch("subprocess.Popen")
-    def test_reset_tracker_allows_relaunch(self, mock_popen):
+    def test_reset_tracker_allows_relaunch(self, mock_popen, mock_proc):
         """After reset_tracker(), the same name can be launched again."""
         launch_exe("/fake/app.exe", "App")
         assert was_launched("App")
@@ -320,8 +333,9 @@ class TestDoubleLaunchPrevention:
         mock_popen.assert_called_once()  # launched again after reset
 
     @patch("os.path.exists", return_value=True)
+    @patch("utils.is_process_running", return_value=False)
     @patch("subprocess.Popen")
-    def test_launch_exe_from_paths_respects_tracker(self, mock_popen, mock_exists):
+    def test_launch_exe_from_paths_respects_tracker(self, mock_popen, mock_proc, mock_exists):
         """launch_exe_from_paths skips when tracker has the name."""
         utils._tracker.mark_launched("Epic Games")
         result = launch_exe_from_paths(["/epic/epic.exe"], "Epic Games")
@@ -358,6 +372,109 @@ class TestPlatformDetection:
         importlib.reload(utils)
         assert utils.is_windows() is False
         assert utils.is_macos() is False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# is_process_running
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestIsProcessRunning:
+    """Tests for system-wide process detection."""
+
+    @patch("utils.is_windows", return_value=True)
+    @patch("subprocess.run")
+    def test_detects_running_process(self, mock_run, mock_win):
+        """Returns True when tasklist output contains the exe name."""
+        mock_run.return_value = MagicMock(stdout="obs64.exe                       1234 Console  1     123,456 K")
+        assert is_process_running("obs64.exe") is True
+
+    @patch("utils.is_windows", return_value=True)
+    @patch("subprocess.run")
+    def test_detects_not_running(self, mock_run, mock_win):
+        """Returns False when tasklist output does not contain the exe name."""
+        mock_run.return_value = MagicMock(stdout="INFO: No tasks are running which match the specified criteria.")
+        assert is_process_running("obs64.exe") is False
+
+    @patch("utils.is_windows", return_value=True)
+    @patch("subprocess.run")
+    def test_case_insensitive_match(self, mock_run, mock_win):
+        """Process name matching should be case-insensitive."""
+        mock_run.return_value = MagicMock(stdout="Steam.exe                       5678 Console  1     234,567 K")
+        assert is_process_running("steam.exe") is True
+
+    @patch("utils.is_windows", return_value=False)
+    def test_non_windows_returns_false(self, mock_win):
+        """On non-Windows, always return False (fail open)."""
+        assert is_process_running("anything.exe") is False
+
+    @patch("utils.is_windows", return_value=True)
+    @patch("subprocess.run", side_effect=subprocess.TimeoutExpired("tasklist", 5))
+    def test_timeout_returns_false(self, mock_run, mock_win):
+        """Timeout → return False (fail open — don't block launch)."""
+        assert is_process_running("slow.exe") is False
+
+    @patch("utils.is_windows", return_value=True)
+    @patch("subprocess.run", side_effect=FileNotFoundError("tasklist not found"))
+    def test_tasklist_missing_returns_false(self, mock_run, mock_win):
+        """tasklist not found → return False (fail open)."""
+        assert is_process_running("anything.exe") is False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Process-level skip in launch_exe
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestProcessLevelSkip:
+    """Tests for system-wide process checking in launch helpers."""
+
+    def setup_method(self):
+        reset_tracker()
+
+    @patch("utils.is_process_running", return_value=True)
+    @patch("subprocess.Popen")
+    def test_launch_exe_skips_when_process_running(self, mock_popen, mock_proc):
+        """When process is already running system-wide, skip the launch."""
+        result = launch_exe("/fake/obs64.exe", "OBS Studio", exe_name="obs64.exe")
+        assert result is True  # Returns True for skip
+        mock_popen.assert_not_called()
+        assert was_launched("OBS Studio") is True  # Still marked as launched
+
+    @patch("utils.is_process_running", return_value=False)
+    @patch("subprocess.Popen")
+    def test_launch_exe_proceeds_when_process_not_running(self, mock_popen, mock_proc):
+        """When process is not running, proceed with launch."""
+        result = launch_exe("/fake/obs64.exe", "OBS Studio", exe_name="obs64.exe")
+        assert result is True
+        mock_popen.assert_called_once_with(["/fake/obs64.exe"])
+
+    @patch("utils.is_process_running", return_value=True)
+    def test_launch_exe_from_paths_skips_when_process_running(self, mock_proc):
+        """launch_exe_from_paths skips when process is running (with exe_name)."""
+        with patch("os.path.exists") as mock_exists:
+            result = launch_exe_from_paths(["/fake/steam.exe"], "Steam", exe_name="Steam.exe")
+            assert result is True
+            mock_exists.assert_not_called()  # Short-circuits before checking paths
+            assert was_launched("Steam") is True
+
+    @patch("utils.is_process_running", return_value=True)
+    @patch("os.startfile")
+    def test_launch_os_startfile_skips_when_process_running(self, mock_start, mock_proc):
+        """launch_os_startfile skips when process is running (with exe_name)."""
+        result = launch_os_startfile("C:\\obs.lnk", "OBS Studio", exe_name="obs64.exe")
+        assert result is True
+        mock_start.assert_not_called()
+        assert was_launched("OBS Studio") is True
+
+    @patch("utils.is_process_running", return_value=False)
+    @patch("subprocess.Popen")
+    def test_tracker_skip_takes_priority_over_process_check(self, mock_popen, mock_proc):
+        """Tracker skip happens first — process check is not even called."""
+        utils._tracker.mark_launched("Steam")
+        result = launch_exe("/fake/steam.exe", "Steam", exe_name="Steam.exe")
+        assert result is True
+        mock_popen.assert_not_called()
+        # is_process_running was never called because tracker skip took priority
+        mock_proc.assert_not_called()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

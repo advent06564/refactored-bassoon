@@ -2,6 +2,7 @@
 
 Provides:
 - Launch-tracking to prevent the same program from being opened twice
+- Process-level detection to skip programs already running system-wide
 - Cross-platform executable resolution
 - Consistent launch helpers
 """
@@ -56,17 +57,51 @@ def find_first_existing(paths: list[str]) -> str | None:
 
 # ── Launch helpers ────────────────────────────────────────────────────────────
 
-def launch_exe(path: str, name: str, *, skip_if_launched: bool = True) -> bool:
+def is_process_running(exe_name: str) -> bool:
+    """Check if a process with the given executable name is running.
+
+    Uses tasklist on Windows; returns False on non-Windows or if tasklist
+    is unavailable (failing open so the user can still attempt a launch).
+
+    Args:
+        exe_name: Executable name (e.g. 'Steam.exe', 'obs64.exe').
+    """
+    if not is_windows():
+        return False
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        # tasklist returns the exe name in its output if the process is running
+        return exe_name.lower() in result.stdout.lower()
+    except Exception:
+        # If we can't check, fail open — don't block a legitimate launch
+        return False
+
+
+def launch_exe(path: str, name: str, *, skip_if_launched: bool = True, exe_name: str | None = None) -> bool:
     """Launch an executable and print status.
 
     Args:
         path: Full path to the executable.
         name: Logical display name (also used for de-duplication).
         skip_if_launched: If True (default), skip launching if `name` was
-            already launched this session.
+            already launched this session OR if the process is already running.
+        exe_name: Optional process name to check (e.g. 'obs64.exe').
+            Derived from path basename if not provided.
     """
     if skip_if_launched and _tracker.was_launched(name):
         print(f"  [SKIP] Already launched: {name}")
+        return True
+
+    # Resolve the exe name for process-level checking
+    proc_name = exe_name or os.path.basename(path)
+    if skip_if_launched and is_process_running(proc_name):
+        print(f"  [SKIP] Already running: {name}")
+        _tracker.mark_launched(name)
         return True
 
     try:
@@ -84,6 +119,7 @@ def launch_exe_from_paths(
     name: str,
     *,
     skip_if_launched: bool = True,
+    exe_name: str | None = None,
 ) -> bool:
     """Find the first existing path and launch it.
 
@@ -93,22 +129,32 @@ def launch_exe_from_paths(
         print(f"  [SKIP] Already launched: {name}")
         return True
 
+    # Check process-level for each candidate path
+    if skip_if_launched and exe_name and is_process_running(exe_name):
+        print(f"  [SKIP] Already running: {name}")
+        _tracker.mark_launched(name)
+        return True
+
     found = find_first_existing(paths)
     if found:
-        return launch_exe(found, name, skip_if_launched=False)
+        return launch_exe(found, name, skip_if_launched=False, exe_name=exe_name)
     else:
         print(f"  - Not found: {name}")
         return False
 
 
 def launch_uwp(uri: str, name: str, *, skip_if_launched: bool = True) -> bool:
-    """Launch a UWP / protocol-handler app on Windows."""
+    """Launch a UWP / protocol-handler app on Windows.
+
+    Uses cmd.exe /c start to invoke the URI handler reliably.
+    """
     if skip_if_launched and _tracker.was_launched(name):
         print(f"  [SKIP] Already launched: {name}")
         return True
 
     try:
-        subprocess.Popen(f'start "" {uri}', shell=True)
+        # Use cmd /c start for reliable URI launching on Windows
+        subprocess.Popen(["cmd", "/c", "start", "", uri])
         print(f"  [OK] Launched: {name}")
         _tracker.mark_launched(name)
         return True
@@ -117,10 +163,16 @@ def launch_uwp(uri: str, name: str, *, skip_if_launched: bool = True) -> bool:
         return False
 
 
-def launch_os_startfile(path: str, name: str, *, skip_if_launched: bool = True) -> bool:
+def launch_os_startfile(path: str, name: str, *, skip_if_launched: bool = True, exe_name: str | None = None) -> bool:
     """Launch via os.startfile (Windows .lnk shortcuts, etc.)."""
     if skip_if_launched and _tracker.was_launched(name):
         print(f"  [SKIP] Already launched: {name}")
+        return True
+
+    # Check process-level if an exe_name is provided
+    if skip_if_launched and exe_name and is_process_running(exe_name):
+        print(f"  [SKIP] Already running: {name}")
+        _tracker.mark_launched(name)
         return True
 
     try:

@@ -51,8 +51,7 @@ def is_wsl() -> bool:
 # -- Main --
 
 def main() -> None:
-    print("
---- Cross-Platform Site Launcher ---")
+    print("\n--- Cross-Platform Site Launcher ---")
 
     browser_name = DEFAULT_BROWSER
     if len(sys.argv) > 1:
@@ -91,8 +90,7 @@ def main() -> None:
 
         time.sleep(delay)
 
-    print("
-Script finished. Tabs should be loading in your browser.")
+    print("\nScript finished. Tabs should be loading in your browser.")
 
 
 if __name__ == "__main__":

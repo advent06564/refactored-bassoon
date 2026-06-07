@@ -60,13 +60,28 @@ _GAME_LAUNCHERS: dict[str, list[str]] = {
     ],
 }
 
+# Process names for system-wide duplicate detection (derived from first path)
+_GAME_LAUNCHER_EXES: dict[str, str] = {
+    "Steam": "Steam.exe",
+    "Epic Games": "EpicGamesLauncher.exe",
+    "GOG Galaxy": "GalaxyClient.exe",
+    "Battle.net": "Battle.net Launcher.exe",
+    "EA Desktop": "EADesktop.exe",
+    "Ubisoft Connect": "UbisoftConnect.exe",
+    "Amazon Games": "Amazon Games.exe",
+    "Xbox Game Pass": "GamingApp.exe",
+    "itch.io": "itch.exe",
+    "PlayStation PC": "RemotePlay.exe",
+}
+
 
 def launch_game_launchers() -> None:
     """Launch all installed game launchers.  Skips any already launched."""
     print("\n--- Game Launchers ---")
     found_any = False
     for name, paths in _GAME_LAUNCHERS.items():
-        if launch_exe_from_paths(paths, name):
+        exe_name = _GAME_LAUNCHER_EXES.get(name)
+        if launch_exe_from_paths(paths, name, exe_name=exe_name):
             found_any = True
     if not found_any:
         print("  No game launchers found.")
@@ -198,6 +213,14 @@ _LIVE_KIT_APPS: dict[str, str] = {
     "Perplexity": os.path.join(ENV["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Perplexity.lnk"),
 }
 
+# Process names for live-kit apps (for system-wide duplicate detection)
+_LIVE_KIT_EXES: dict[str, str] = {
+    "Warudo": "Warudo.exe",
+    "OBS Studio": "obs64.exe",
+    "OneNote": "ONENOTE.EXE",
+    "Perplexity": "Perplexity.exe",
+}
+
 
 def launch_live_kit() -> None:
     """Launch live-streaming & recording apps.
@@ -209,7 +232,8 @@ def launch_live_kit() -> None:
     found_any = False
 
     for name, path in _LIVE_KIT_APPS.items():
-        if launch_os_startfile(path, name):
+        exe_name = _LIVE_KIT_EXES.get(name)
+        if launch_os_startfile(path, name, exe_name=exe_name):
             found_any = True
 
     if launch_uwp("ms-sticky-notes:", "Sticky Notes"):
